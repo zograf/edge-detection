@@ -1,5 +1,7 @@
 #include <iostream>
 #include <stdlib.h>
+#include <filesystem>
+#include <string>
 #include "BitmapRawConverter.h"
 
 #define __ARG_NUM__				6
@@ -107,12 +109,18 @@ void run_test_nr(int testNr, BitmapRawConverter* ioFile, char* outFileName, int*
 
 int main(int argc, char * argv[])
 {
+    char* output[4];
+    output[0] = (char*) "../../out/serialPrewitt.bmp";
+    output[1] = (char*) "../../out/parallelPrewitt.bmp";
+    output[2] = (char*) "../../out/serialEdge.bmp";
+    output[3] = (char*) "../../out/parallelEdge.bmp";
+    char* path = (char*) "../../res/color.bmp";
 
-	BitmapRawConverter inputFile("color.bmp");
-	BitmapRawConverter outputFileSerialPrewitt("color.bmp");
-	BitmapRawConverter outputFileParallelPrewitt("color.bmp");
-	BitmapRawConverter outputFileSerialEdge("color.bmp");
-	BitmapRawConverter outputFileParallelEdge("color.bmp");
+	BitmapRawConverter inputFile(path);
+	BitmapRawConverter outputFileSerialPrewitt(path);
+	BitmapRawConverter outputFileParallelPrewitt(path);
+	BitmapRawConverter outputFileSerialEdge(path);
+	BitmapRawConverter outputFileParallelEdge(path);
 
 	unsigned int width, height;
 
@@ -134,16 +142,16 @@ int main(int argc, char * argv[])
 	memset(outBufferParallelEdge, 0x0, width * height * sizeof(int));
 
 	// serial version Prewitt
-	run_test_nr(1, &outputFileSerialPrewitt, argv[2], outBufferSerialPrewitt, width, height);
+	run_test_nr(1, &outputFileSerialPrewitt, output[0], outBufferSerialPrewitt, width, height);
 
 	// parallel version Prewitt
-	run_test_nr(2, &outputFileParallelPrewitt, argv[3], outBufferParallelPrewitt, width, height);
+	run_test_nr(2, &outputFileParallelPrewitt, output[1], outBufferParallelPrewitt, width, height);
 
 	// serial version special
-	run_test_nr(3, &outputFileSerialEdge, argv[4], outBufferSerialEdge, width, height);
+	run_test_nr(3, &outputFileSerialEdge, output[2], outBufferSerialEdge, width, height);
 
 	// parallel version special
-	run_test_nr(4, &outputFileParallelEdge, argv[5], outBufferParallelEdge, width, height);
+	run_test_nr(4, &outputFileParallelEdge, output[3], outBufferParallelEdge, width, height);
 
 	// verification
 	cout << "Verification: ";
@@ -170,11 +178,11 @@ int main(int argc, char * argv[])
 	}
 
 	// clean up
-	delete outBufferSerialPrewitt;
-	delete outBufferParallelPrewitt;
+	delete[] outBufferSerialPrewitt;
+	delete[] outBufferParallelPrewitt;
 
-	delete outBufferSerialEdge;
-	delete outBufferParallelEdge;
+	delete[] outBufferSerialEdge;
+	delete[] outBufferParallelEdge;
 
 	return 0;
 } 

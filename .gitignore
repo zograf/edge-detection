@@ -1,0 +1,6 @@
+src/.lock*
+src/.waf*
+src/build/
+src/build/*
+out/*
+out/
