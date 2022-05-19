@@ -3,12 +3,15 @@
 #include <filesystem>
 #include <string>
 #include "BitmapRawConverter.h"
+#include "tbb/task_group.h"
+#include <tbb/tick_count.h>
 
 #define __ARG_NUM__				6
 #define FILTER_SIZE				3
 #define THRESHOLD				30
 
 using namespace std;
+using namespace tbb;
 
 // Prewitt operators
 const int horizontal_filter[FILTER_SIZE * FILTER_SIZE] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};
@@ -52,6 +55,23 @@ void filter_serial_prewitt(int *inBuffer, int *outBuffer, int width, int height)
 * @param height image height
 */
 void filter_parallel_prewitt(int *inBuffer, int *outBuffer, int width, int height) {
+}
+
+void parallel_prewitt() {
+    //TODO: implement this recursively
+    // task_group g;
+    // double ret = 0;
+    // if (abs(upperBound - lowerBound) < c) { 
+    //     ret = incremental(lowerBound, upperBound, d);
+    // }
+    // else {
+    //     double x, y;
+    //     g.run([&] {x = parallel_integration(lowerBound, (upperBound + lowerBound) / 2, d, c); });
+    //     g.run([&] {y = parallel_integration((upperBound + lowerBound) / 2, upperBound, d, c); });
+    //     g.wait();
+    //     ret = x + y;
+    // }
+    // return ret;
 }
 
 /**
