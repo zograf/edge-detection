@@ -11,7 +11,7 @@
 #define FILTER_SIZE_3			3
 #define FILTER_SIZE_5			5
 #define THRESHOLD				128
-#define PREWITT_CUTOFF          1000
+#define CUTOFF                  500
 
 using namespace std;
 using namespace tbb;
@@ -50,8 +50,8 @@ void prewitt_convolve(int* in_matrix, int* out_matrix, int x, int y, int filter_
 
     for (int i = 0; i < filter_size; i++) {
         for (int j = 0; j < filter_size; j++) {
-            sum_h += horizontal[i * filter_size + j] * in_matrix[(x + i) * picture_width + (y + j)];
-            sum_v += vertical[i * filter_size + j] * in_matrix[(x + i) * picture_width + (y + j)];
+            sum_h += horizontal[i * filter_size + j] * in_matrix[(x - 1 + i) * picture_width + (y - 1 + j)];
+            sum_v += vertical[i * filter_size + j] * in_matrix[(x - 1 + i) * picture_width + (y - 1 + j)];
         }
     }
 
@@ -86,7 +86,7 @@ void filter_serial_prewitt(int *inBuffer, int *outBuffer) {
 void parallel_prewitt(int *inBuffer, int *outBuffer, int starting_width, int ending_width, 
         int starting_height, int ending_height) {
 
-    if (abs(ending_width - starting_width) <= PREWITT_CUTOFF || abs(ending_height - starting_height) <= PREWITT_CUTOFF)
+    if (abs(ending_width - starting_width) <= CUTOFF || abs(ending_height - starting_height) <= CUTOFF)
         serial_prewitt(inBuffer, outBuffer, starting_width, ending_width, starting_height, ending_height);
 
     else {
@@ -136,7 +136,7 @@ void calculate_p_o(int *inBuffer, int *outBuffer, int x, int y) {
             // if "1" exists
             if (inBuffer[(x - 1 + ver) * picture_width + (y - 1 + hor)] > THRESHOLD) p = 1;
             // if "0" exists
-            if (inBuffer[(x - 1 + ver) * picture_width + (y - 1 + hor)] <= THRESHOLD) o = 1;
+            if (inBuffer[(x - 1 + ver) * picture_width + (y - 1 + hor)] < THRESHOLD) o = 1;
         }
     }
     outBuffer[x * picture_width + y] = (p ^ o) == 1 ? 0 : 255;
@@ -153,8 +153,36 @@ void serial_edge_detection(int *inBuffer, int *outBuffer, int starting_width, in
 
 }
 
-void parallel_edge_detection(int *inBuffer, int *outBuffer) {
-    return;
+void parallel_edge_detection(int *inBuffer, int *outBuffer, int starting_width, int ending_width, 
+        int starting_height, int ending_height) {
+
+    if (abs(ending_width - starting_width) <= CUTOFF || abs(ending_height - starting_height) <= CUTOFF)
+        serial_edge_detection(inBuffer, outBuffer, starting_width, ending_width, starting_height, ending_height);
+
+    else {
+        task_group tg;
+        // 1
+        tg.run([=]() {
+                serial_edge_detection(inBuffer, outBuffer, starting_width, starting_width + (ending_width - starting_width) / 2, 
+                        starting_height, starting_height + (ending_height - starting_height) / 2);
+        });
+        // 2
+        tg.run([=]() {
+                serial_edge_detection(inBuffer, outBuffer, starting_width, starting_width + (ending_width - starting_width) / 2, 
+                        starting_height + (ending_height - starting_height) / 2, ending_height);
+        });
+        // 3
+        tg.run([=]() {
+                serial_edge_detection(inBuffer, outBuffer, starting_width + (ending_width - starting_width) / 2, ending_width, 
+                        starting_height, starting_height + (ending_height - starting_height) / 2);
+        });
+        // 4
+        tg.run([=]() {
+                serial_edge_detection(inBuffer, outBuffer, starting_width + (ending_width - starting_width) / 2, ending_width, 
+                        starting_height + (ending_height - starting_height) / 2, ending_height);
+        });
+        tg.wait();
+    }
 }
 
 /**
@@ -179,7 +207,7 @@ void filter_serial_edge_detection(int *inBuffer, int *outBuffer) {
 * @param height image height
 */
 void filter_parallel_edge_detection(int *inBuffer, int *outBuffer) {
-    parallel_edge_detection(inBuffer, outBuffer);
+    parallel_edge_detection(inBuffer, outBuffer, 1, picture_width - 1, 1, picture_height - 1);
 }
 
 /**
