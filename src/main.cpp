@@ -10,10 +10,13 @@
 #define __ARG_NUM__				6
 #define FILTER_SIZE				3
 #define THRESHOLD				128
-#define PREWITT_CUTOFF          1500
+#define PREWITT_CUTOFF          1000
 
 using namespace std;
 using namespace tbb;
+
+// Edge detection -> Ako postoji u okolini neko veci od thresholda onda je 0 else je 1
+// 
 
 // Prewitt operators
 const int horizontal_filter[FILTER_SIZE * FILTER_SIZE] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};
@@ -61,6 +64,7 @@ void filter_serial_prewitt(int *inBuffer, int *outBuffer) {
 void parallel_prewitt(int *inBuffer, int *outBuffer, int starting_width, int ending_width, 
         int starting_height, int ending_height) {
 
+    cout << starting_width << "\t" << ending_width << "\t" << starting_height << "\t" << ending_height << endl; 
     if (abs(ending_width - starting_width) <= PREWITT_CUTOFF || abs(ending_height - starting_height) <= PREWITT_CUTOFF) { 
         serial_prewitt(inBuffer, outBuffer, starting_width, ending_width, starting_height, ending_height);
         return;
