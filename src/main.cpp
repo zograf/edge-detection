@@ -16,7 +16,6 @@
 using namespace std;
 using namespace tbb;
 
-// Edge detection -> Ako postoji u okolini neko veci od thresholda onda je 0 else je 1
 
 // Prewitt operators
 const int horizontal_3x3[FILTER_SIZE_3 * FILTER_SIZE_3] = { -1, 0, 1, 
@@ -36,6 +35,7 @@ const int vertical_5x5[FILTER_SIZE_5 * FILTER_SIZE_5] = {9, 9, -7, -7, -7,
                                                         9, 5, -3, -3, -7,
                                                         9, 9, -7, -7, -7};
 
+// Global width and height
 int picture_width, picture_height;
 
 void prewitt_convolve(int* in_matrix, int* out_matrix, int x, int y, int filter_size) { 
@@ -64,7 +64,7 @@ void serial_prewitt(int *inBuffer, int *outBuffer, int starting_width, int endin
 
     for (int i = starting_height; i < ending_height; i++) {
         for (int j = starting_width; j < ending_width; j++) {
-            prewitt_convolve(inBuffer, outBuffer, i, j, 5);
+            prewitt_convolve(inBuffer, outBuffer, i, j, 3);
         }
     }
 }
@@ -127,6 +127,36 @@ void filter_parallel_prewitt(int *inBuffer, int *outBuffer) {
     parallel_prewitt(inBuffer, outBuffer, 1, picture_width - 1, 1, picture_height - 1);
 }
 
+void calculate_p_o(int *inBuffer, int *outBuffer, int x, int y) {
+    int p = 0, o = 0;
+    int distance = 3;
+    // Surrounding pixels
+    for (int ver = 0; ver < distance; ver++) {
+        for (int hor = 0; hor < distance; hor++) {
+            // if "1" exists
+            if (inBuffer[(x - 1 + ver) * picture_width + (y - 1 + hor)] > THRESHOLD) p = 1;
+            // if "0" exists
+            if (inBuffer[(x - 1 + ver) * picture_width + (y - 1 + hor)] <= THRESHOLD) o = 1;
+        }
+    }
+    outBuffer[x * picture_width + y] = (p ^ o) == 1 ? 0 : 255;
+}
+
+void serial_edge_detection(int *inBuffer, int *outBuffer, int starting_width, int ending_width, 
+        int starting_height, int ending_height) {
+
+    for (int i = starting_height; i < ending_height; i++) {
+        for (int j = starting_width; j < ending_width; j++) {
+            calculate_p_o(inBuffer, outBuffer, i, j);
+        }
+    }
+
+}
+
+void parallel_edge_detection(int *inBuffer, int *outBuffer) {
+    return;
+}
+
 /**
 * @brief Serial version of edge detection algorithm
 *
@@ -135,7 +165,9 @@ void filter_parallel_prewitt(int *inBuffer, int *outBuffer) {
 * @param width image width
 * @param height image height
 */
-void filter_serial_edge_detection(int *inBuffer, int *outBuffer, int width, int height) {
+// Edge detection -> Ako postoji u okolini neko veci od thresholda onda je 0 else je 1
+void filter_serial_edge_detection(int *inBuffer, int *outBuffer) {
+    serial_edge_detection(inBuffer, outBuffer, 1, picture_width - 1, 1, picture_height - 1);
 }
 
 /**
@@ -146,7 +178,8 @@ void filter_serial_edge_detection(int *inBuffer, int *outBuffer, int width, int 
 * @param width image width
 * @param height image height
 */
-void filter_parallel_edge_detection(int *inBuffer, int *outBuffer, int width, int height) {
+void filter_parallel_edge_detection(int *inBuffer, int *outBuffer) {
+    parallel_edge_detection(inBuffer, outBuffer);
 }
 
 /**
@@ -162,7 +195,7 @@ void filter_parallel_edge_detection(int *inBuffer, int *outBuffer, int width, in
 
 
 void run_test_nr(int testNr, BitmapRawConverter* ioFile, 
-        char* outFileName, int* outBuffer, unsigned int width, unsigned int height) {
+        char* outFileName, int* outBuffer) {
 
     auto start = std::chrono::high_resolution_clock::now();
 	switch (testNr) {
@@ -176,11 +209,11 @@ void run_test_nr(int testNr, BitmapRawConverter* ioFile,
 			break;
 		case 3:
 			cout << "Running serial version of edge detection" << endl;
-			filter_serial_edge_detection(ioFile->getBuffer(), outBuffer, width, height);
+			filter_serial_edge_detection(ioFile->getBuffer(), outBuffer);
 			break;
 		case 4:
 			cout << "Running parallel version of edge detection" << endl;
-			filter_parallel_edge_detection(ioFile->getBuffer(), outBuffer, width, height);
+			filter_parallel_edge_detection(ioFile->getBuffer(), outBuffer);
 			break;
 		default:
 			cout << "ERROR: invalid test case, must be 1, 2, 3 or 4!";
@@ -229,39 +262,36 @@ int main(int argc, char * argv[]) {
 	inputFile.setBuffer(outBufferSerialPrewitt);
 	inputFile.pixelsToBitmap(output[0]);
 	// serial version Prewitt
-	run_test_nr(1, &outputFileSerialPrewitt, output[0], outBufferSerialPrewitt, picture_width, picture_height);
+	run_test_nr(1, &outputFileSerialPrewitt, output[0], outBufferSerialPrewitt);
 
 	// parallel version Prewitt
-	run_test_nr(2, &outputFileParallelPrewitt, output[1], outBufferParallelPrewitt, picture_width, picture_height);
+	run_test_nr(2, &outputFileParallelPrewitt, output[1], outBufferParallelPrewitt);
 
 	// serial version special
-	run_test_nr(3, &outputFileSerialEdge, output[2], outBufferSerialEdge, picture_width, picture_height);
+	run_test_nr(3, &outputFileSerialEdge, output[2], outBufferSerialEdge);
 
 	// parallel version special
-	run_test_nr(4, &outputFileParallelEdge, output[3], outBufferParallelEdge, picture_width, picture_height);
+	run_test_nr(4, &outputFileParallelEdge, output[3], outBufferParallelEdge);
 
 	// verification
-    /*
 	cout << "Verification: ";
-	test = memcmp(outBufferSerialPrewitt, outBufferParallelPrewitt, width * height * sizeof(int));
+	test = memcmp(outBufferSerialPrewitt, outBufferParallelPrewitt, picture_width * picture_height * sizeof(int));
 
 	if(test != 0)
 		cout << "Prewitt FAIL!" << endl;
     else
 		cout << "Prewitt PASS." << endl;
 
-	test = memcmp(outBufferSerialEdge, outBufferParallelEdge, width * height * sizeof(int));
+	test = memcmp(outBufferSerialEdge, outBufferParallelEdge, picture_width * picture_height * sizeof(int));
 
 	if(test != 0)
 		cout << "Edge detection FAIL!" << endl;
 	else
 		cout << "Edge detection PASS." << endl;
 
-    */
 	// clean up
 	delete[] outBufferSerialPrewitt;
 	delete[] outBufferParallelPrewitt;
-
 	delete[] outBufferSerialEdge;
 	delete[] outBufferParallelEdge;
 
