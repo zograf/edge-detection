@@ -8,7 +8,8 @@
 #include <chrono>
 
 #define __ARG_NUM__				6
-#define FILTER_SIZE				3
+#define FILTER_SIZE_3			3
+#define FILTER_SIZE_5			5
 #define THRESHOLD				128
 #define PREWITT_CUTOFF          1000
 
@@ -16,20 +17,41 @@ using namespace std;
 using namespace tbb;
 
 // Edge detection -> Ako postoji u okolini neko veci od thresholda onda je 0 else je 1
-// 
 
 // Prewitt operators
-const int horizontal_filter[FILTER_SIZE * FILTER_SIZE] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};
-const int vertical_filter[FILTER_SIZE * FILTER_SIZE] = {-1, -1, -1, 0, 0, 0, 1, 1, 1};
+const int horizontal_3x3[FILTER_SIZE_3 * FILTER_SIZE_3] = { -1, 0, 1, 
+                                                            -1, 0, 1, 
+                                                            -1, 0, 1};
+const int vertical_3x3[FILTER_SIZE_3 * FILTER_SIZE_3] = {-1, -1, -1, 
+                                                         0, 0, 0, 
+                                                         1, 1, 1};
+const int horizontal_5x5[FILTER_SIZE_5 * FILTER_SIZE_5] = { 9, 9, 9, 9, 9, 
+                                                            9, 5, 5, 5, 9, 
+                                                            -7, -3, 0, -3, -7
+                                                            -7, -3, -3, -3, -7
+                                                            -7, -7, -7, -7, -7};
+const int vertical_5x5[FILTER_SIZE_5 * FILTER_SIZE_5] = {9, 9, -7, -7, -7,
+                                                        9, 5, -3, -3, -7,
+                                                        9, 5, 0, -3, -7,
+                                                        9, 5, -3, -3, -7,
+                                                        9, 9, -7, -7, -7};
 
 int picture_width, picture_height;
 
-void multiply(int* in_matrix, int* out_matrix, int x, int y) { 
+void prewitt_convolve(int* in_matrix, int* out_matrix, int x, int y, int filter_size) { 
     int sum_h = 0, sum_v = 0;
-    for (int i = 0; i < FILTER_SIZE; i++) {
-        for (int j = 0; j < FILTER_SIZE; j++) {
-            sum_h += horizontal_filter[i * FILTER_SIZE + j] * in_matrix[(x + i) * picture_width + (y + j)];
-            sum_v += vertical_filter[i * FILTER_SIZE + j] * in_matrix[(x + i) * picture_width + (y + j)];
+    auto horizontal = horizontal_3x3;
+    auto vertical = vertical_3x3;
+
+    if (filter_size == 5) {
+        horizontal = horizontal_5x5;
+        vertical = vertical_5x5;
+    }
+
+    for (int i = 0; i < filter_size; i++) {
+        for (int j = 0; j < filter_size; j++) {
+            sum_h += horizontal[i * filter_size + j] * in_matrix[(x + i) * picture_width + (y + j)];
+            sum_v += vertical[i * filter_size + j] * in_matrix[(x + i) * picture_width + (y + j)];
         }
     }
 
@@ -42,7 +64,7 @@ void serial_prewitt(int *inBuffer, int *outBuffer, int starting_width, int endin
 
     for (int i = starting_height; i < ending_height; i++) {
         for (int j = starting_width; j < ending_width; j++) {
-            multiply(inBuffer, outBuffer, i, j);
+            prewitt_convolve(inBuffer, outBuffer, i, j, 5);
         }
     }
 }
@@ -64,30 +86,33 @@ void filter_serial_prewitt(int *inBuffer, int *outBuffer) {
 void parallel_prewitt(int *inBuffer, int *outBuffer, int starting_width, int ending_width, 
         int starting_height, int ending_height) {
 
-    cout << starting_width << "\t" << ending_width << "\t" << starting_height << "\t" << ending_height << endl; 
-    if (abs(ending_width - starting_width) <= PREWITT_CUTOFF || abs(ending_height - starting_height) <= PREWITT_CUTOFF) { 
+    if (abs(ending_width - starting_width) <= PREWITT_CUTOFF || abs(ending_height - starting_height) <= PREWITT_CUTOFF)
         serial_prewitt(inBuffer, outBuffer, starting_width, ending_width, starting_height, ending_height);
-        return;
-    }
 
-    task_group tg;
-    // 1
-    tg.run([&]() {
-            parallel_prewitt(inBuffer, outBuffer, starting_width, ending_width / 2, starting_height, ending_height / 2);
-    });
-    // 2
-    tg.run([&]() {
-            parallel_prewitt(inBuffer, outBuffer, starting_width, ending_width / 2, ending_height / 2, ending_height);
-    });
-    // 3
-    tg.run([&]() {
-            parallel_prewitt(inBuffer, outBuffer, ending_width / 2, ending_width, starting_height, ending_height / 2);
-    });
-    // 4
-    tg.run([&]() {
-            parallel_prewitt(inBuffer, outBuffer, ending_width / 2, ending_width, ending_height / 2, ending_height);
-    });
-    tg.wait();
+    else {
+        task_group tg;
+        // 1
+        tg.run([=]() {
+                parallel_prewitt(inBuffer, outBuffer, starting_width, starting_width + (ending_width - starting_width) / 2, 
+                        starting_height, starting_height + (ending_height - starting_height) / 2);
+        });
+        // 2
+        tg.run([=]() {
+                parallel_prewitt(inBuffer, outBuffer, starting_width, starting_width + (ending_width - starting_width) / 2, 
+                        starting_height + (ending_height - starting_height) / 2, ending_height);
+        });
+        // 3
+        tg.run([=]() {
+                parallel_prewitt(inBuffer, outBuffer, starting_width + (ending_width - starting_width) / 2, ending_width, 
+                        starting_height, starting_height + (ending_height - starting_height) / 2);
+        });
+        // 4
+        tg.run([=]() {
+                parallel_prewitt(inBuffer, outBuffer, starting_width + (ending_width - starting_width) / 2, ending_width, 
+                        starting_height + (ending_height - starting_height) / 2, ending_height);
+        });
+        tg.wait();
+    }
 }
 
 /**
