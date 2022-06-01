@@ -63,8 +63,9 @@ def build(bld):
 		target = 'ImageProcessing',
 		source = [
 			'main.cpp',
-			'BitmapRawConverter.cpp',
-			'EasyBMP.cpp',
+			'bitmap/BitmapRawConverter.cpp',
+			'bitmap/EasyBMP.cpp',
+            'filter/filter.cpp',
 		]
 	)
 	

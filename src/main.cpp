@@ -2,10 +2,11 @@
 #include <stdlib.h>
 #include <filesystem>
 #include <string>
-#include "BitmapRawConverter.h"
+#include "bitmap/BitmapRawConverter.h"
 #include "tbb/task_group.h"
 #include <tbb/tick_count.h>
 #include <chrono>
+#include "filter/filter.h"
 
 #define __ARG_NUM__				6
 #define FILTER_SIZE_3			3
@@ -289,6 +290,46 @@ int main(int argc, char * argv[]) {
 
 	inputFile.setBuffer(outBufferSerialPrewitt);
 	inputFile.pixelsToBitmap(output[0]);
+
+    image_filter::Filter f;
+    f.set_cutoff(500);
+    f.set_distance(1);
+    f.set_filter(3);
+    f.set_width(picture_width);
+    f.set_height(picture_height);
+
+    auto start = std::chrono::high_resolution_clock::now();
+    f.apply_serial(outputFileSerialPrewitt.getBuffer(), outBufferSerialPrewitt, image_filter::PREWITT_OPERATOR);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    cout << elapsed << " milliseconds" << endl;
+	outputFileSerialPrewitt.setBuffer(outBufferSerialPrewitt);
+	outputFileSerialPrewitt.pixelsToBitmap(output[0]);
+
+    start = std::chrono::high_resolution_clock::now();
+    f.apply_parallel(outputFileParallelPrewitt.getBuffer(), outBufferParallelPrewitt, image_filter::PREWITT_OPERATOR);
+    end = std::chrono::high_resolution_clock::now();
+    elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    cout << elapsed << " milliseconds" << endl;
+	outputFileParallelPrewitt.setBuffer(outBufferParallelPrewitt);
+	outputFileParallelPrewitt.pixelsToBitmap(output[1]);
+
+    start = std::chrono::high_resolution_clock::now();
+    f.apply_serial(outputFileSerialEdge.getBuffer(), outBufferSerialEdge, image_filter::EDGE_DETECTION);
+    end = std::chrono::high_resolution_clock::now();
+    elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    cout << elapsed << " milliseconds" << endl;
+	outputFileSerialEdge.setBuffer(outBufferSerialEdge);
+	outputFileSerialEdge.pixelsToBitmap(output[2]);
+
+    start = std::chrono::high_resolution_clock::now();
+    f.apply_parallel(outputFileParallelEdge.getBuffer(), outBufferParallelEdge, image_filter::EDGE_DETECTION);
+    end = std::chrono::high_resolution_clock::now();
+    elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    cout << elapsed << " milliseconds" << endl;
+	outputFileParallelEdge.setBuffer(outBufferParallelEdge);
+	outputFileParallelEdge.pixelsToBitmap(output[3]);
+    /*
 	// serial version Prewitt
 	run_test_nr(1, &outputFileSerialPrewitt, output[0], outBufferSerialPrewitt);
 
@@ -302,6 +343,7 @@ int main(int argc, char * argv[]) {
 	run_test_nr(4, &outputFileParallelEdge, output[3], outBufferParallelEdge);
 
 	// verification
+    */
 	cout << "Verification: ";
 	test = memcmp(outBufferSerialPrewitt, outBufferParallelPrewitt, picture_width * picture_height * sizeof(int));
 
@@ -322,6 +364,7 @@ int main(int argc, char * argv[]) {
 	delete[] outBufferParallelPrewitt;
 	delete[] outBufferSerialEdge;
 	delete[] outBufferParallelEdge;
+
 
 	return 0;
 } 
