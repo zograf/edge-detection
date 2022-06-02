@@ -66,7 +66,7 @@ namespace image_filter {
             void serial_prewitt(int *in_matrix, int *out_matrix, dimension dim);
             void serial_edge_detection(int *in_matrix, int *out_matrix, dimension dim);
         public:
-            Filter() { }
+            Filter();
             ~Filter() { }
 
             void apply_serial(int *in_matrix, int* out_matrix, filter_type type);

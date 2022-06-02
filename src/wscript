@@ -66,6 +66,7 @@ def build(bld):
 			'bitmap/BitmapRawConverter.cpp',
 			'bitmap/EasyBMP.cpp',
             'filter/filter.cpp',
+            '../test/test.cpp',
 		]
 	)
 	

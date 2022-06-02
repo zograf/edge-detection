@@ -1,6 +1,42 @@
 #include "filter.h"
+#include "../bitmap/BitmapRawConverter.h"
 #include <vector>
 #include <iostream>
+#include <string>
+
+image_filter::Filter::Filter() {
+    // char* output[4];
+    // output[0] = (char*) "../../out/serialPrewitt.bmp";
+    // output[1] = (char*) "../../out/parallelPrewitt.bmp";
+    // output[2] = (char*) "../../out/serialEdge.bmp";
+    // output[3] = (char*) "../../out/parallelEdge.bmp";
+    // char* path = (char*) "../../res/color.bmp";
+
+	// BitmapRawConverter inputFile(path);
+	// BitmapRawConverter outputFileSerialPrewitt(path);
+	// BitmapRawConverter outputFileParallelPrewitt(path);
+	// BitmapRawConverter outputFileSerialEdge(path);
+	// BitmapRawConverter outputFileParallelEdge(path);
+
+	// int test;
+	// 
+	// picture_width = inputFile.getWidth();
+	// picture_height = inputFile.getHeight();
+
+	// int* outBufferSerialPrewitt = new int[picture_width * picture_height];
+	// int* outBufferParallelPrewitt = new int[picture_width * picture_height];
+    // int* outBufferSerialEdge = new int[picture_width * picture_height];
+    // int* outBufferParallelEdge = new int[picture_width * picture_height];
+
+
+    // memset(outBufferSerialPrewitt, 0x0, picture_width * picture_height * sizeof(int));
+    // memset(outBufferParallelPrewitt, 0x0, picture_width * picture_height * sizeof(int));
+	// memset(outBufferSerialEdge, 0x0, picture_width * picture_height * sizeof(int));
+	// memset(outBufferParallelEdge, 0x0, picture_width * picture_height * sizeof(int));
+
+	// inputFile.setBuffer(outBufferSerialPrewitt);
+	// inputFile.pixelsToBitmap(output[0]);
+}
 
 int image_filter::prewitt_convolve(int *in_matrix, const int* filter_h, 
         const int* filter_v, int filter_size, int picture_width, int x, int y) {
