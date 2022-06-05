@@ -89,6 +89,7 @@ int main(int argc, char * argv[]) {
 	// delete[] outBufferParallelEdge;
 
     filter_test::prewitt_convolve_test();
+    filter_test::calculate_p_o_test();
 
 	return 0;
 } 
