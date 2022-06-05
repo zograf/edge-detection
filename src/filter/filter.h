@@ -58,28 +58,26 @@ namespace image_filter {
             int distance;
             int cutoff;
 
-            void serial(int *in_matrix, int *out_matrix, 
-                    dimension dim, void (Filter::*f)(int*, int*, dimension));
-            void parallel(int *in_matrix, int *out_matrix, 
-                    dimension dim, void (Filter::*f)(int*, int*, dimension));
+            void serial(int*, int*, dimension, void (Filter::*)(int*, int*, dimension));
+            void parallel(int*, int*, dimension, void (Filter::*)(int*, int*, dimension));
 
-            void serial_prewitt(int *in_matrix, int *out_matrix, dimension dim);
-            void serial_edge_detection(int *in_matrix, int *out_matrix, dimension dim);
+            void serial_prewitt(int*, int*, dimension);
+            void serial_edge_detection(int*, int*, dimension);
         public:
             Filter();
             ~Filter() { }
 
-            void apply_serial(int *in_matrix, int* out_matrix, filter_type type);
-            void apply_parallel(int *in_matrix, int* out_matrix, filter_type type);
+            void apply_serial(int*, int*, filter_type);
+            void apply_parallel(int*, int*, filter_type);
+            void run();
 
-            void set_filter(int filter_size); 
-            void set_width(int width) { this->picture_width = width; }
-            void set_height(int height) { this->picture_height = height; }
-            void set_distance(int distance) {this->distance = distance * 2 + 1; }
-            void set_cutoff(int cutoff) { this->cutoff = cutoff; }
+            void set_filter(int); 
+            void set_width(int);
+            void set_height(int);
+            void set_distance(int);
+            void set_cutoff(int);
     };
 
-    int prewitt_convolve(int *in_matrix, const int* filter_h, 
-            const int* filter_v, int filter_size, int picture_width, int x, int y);
-    int calculate_p_o(int *in_matrix, int picutre_width, int x, int y, int distance);
+    int prewitt_convolve(int*, const int*, const int*, int, int, int, int);
+    int calculate_p_o(int*, int, int, int, int);
 }

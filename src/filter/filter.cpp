@@ -1,41 +1,84 @@
 #include "filter.h"
-#include "../bitmap/BitmapRawConverter.h"
 #include <vector>
 #include <iostream>
 #include <string>
 
 image_filter::Filter::Filter() {
-    // char* output[4];
-    // output[0] = (char*) "../../out/serialPrewitt.bmp";
-    // output[1] = (char*) "../../out/parallelPrewitt.bmp";
-    // output[2] = (char*) "../../out/serialEdge.bmp";
-    // output[3] = (char*) "../../out/parallelEdge.bmp";
-    // char* path = (char*) "../../res/color.bmp";
+}
 
-	// BitmapRawConverter inputFile(path);
-	// BitmapRawConverter outputFileSerialPrewitt(path);
-	// BitmapRawConverter outputFileParallelPrewitt(path);
-	// BitmapRawConverter outputFileSerialEdge(path);
-	// BitmapRawConverter outputFileParallelEdge(path);
+void image_filter::Filter::run() {
+    char* output[4];
+    output[0] = (char*) "../../out/serialPrewitt.bmp";
+    output[1] = (char*) "../../out/serialEdge.bmp";
+    output[2] = (char*) "../../out/parallelPrewitt.bmp";
+    output[3] = (char*) "../../out/parallelEdge.bmp";
+    char* path = (char*) "../../res/color.bmp";
 
-	// int test;
-	// 
-	// picture_width = inputFile.getWidth();
-	// picture_height = inputFile.getHeight();
+	BitmapRawConverter inputFile(path);
+	BitmapRawConverter outputFileSerialPrewitt(path);
+	BitmapRawConverter outputFileParallelPrewitt(path);
+	BitmapRawConverter outputFileSerialEdge(path);
+	BitmapRawConverter outputFileParallelEdge(path);
 
-	// int* outBufferSerialPrewitt = new int[picture_width * picture_height];
-	// int* outBufferParallelPrewitt = new int[picture_width * picture_height];
-    // int* outBufferSerialEdge = new int[picture_width * picture_height];
-    // int* outBufferParallelEdge = new int[picture_width * picture_height];
+    int p_width = inputFile.getWidth();
+    int p_height = inputFile.getHeight();
 
+    this->set_width(p_width);
+    this->set_height(p_height);
+    this->set_cutoff(500);
+    this->set_distance(1);
+    this->set_filter(3);
 
-    // memset(outBufferSerialPrewitt, 0x0, picture_width * picture_height * sizeof(int));
-    // memset(outBufferParallelPrewitt, 0x0, picture_width * picture_height * sizeof(int));
-	// memset(outBufferSerialEdge, 0x0, picture_width * picture_height * sizeof(int));
-	// memset(outBufferParallelEdge, 0x0, picture_width * picture_height * sizeof(int));
+	int* outBufferSerialPrewitt = new int[p_width * p_height];
+	int* outBufferParallelPrewitt = new int[p_width * p_height];
+    int* outBufferSerialEdge = new int[p_width * p_height];
+    int* outBufferParallelEdge = new int[p_width * p_height];
 
-	// inputFile.setBuffer(outBufferSerialPrewitt);
-	// inputFile.pixelsToBitmap(output[0]);
+    std::memset(outBufferSerialPrewitt, 0x0, p_width * p_height * sizeof(int));
+    std::memset(outBufferParallelPrewitt, 0x0, p_width * p_height * sizeof(int));
+    std::memset(outBufferSerialEdge, 0x0, p_width * p_height * sizeof(int));
+    std::memset(outBufferParallelEdge, 0x0, p_width * p_height * sizeof(int));
+
+    auto start = std::chrono::high_resolution_clock::now();
+    std::cout << "SERIAL PREWITT" << std::endl;
+    this->apply_serial(outputFileSerialPrewitt.getBuffer(), outBufferSerialPrewitt, image_filter::PREWITT_OPERATOR);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    std::cout << elapsed << " microseconds" << std::endl;
+    outputFileSerialPrewitt.setBuffer(outBufferSerialPrewitt);
+    outputFileSerialPrewitt.pixelsToBitmap(output[0]);
+
+    start = std::chrono::high_resolution_clock::now();
+    std::cout << "SERIAL EDGE" << std::endl;
+    this->apply_serial(outputFileSerialEdge.getBuffer(), outBufferSerialEdge, image_filter::EDGE_DETECTION);
+    end = std::chrono::high_resolution_clock::now();
+    elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    std::cout << elapsed << " microseconds" << std::endl;
+    outputFileSerialEdge.setBuffer(outBufferSerialEdge);
+    outputFileSerialEdge.pixelsToBitmap(output[1]);
+
+    start = std::chrono::high_resolution_clock::now();
+    std::cout << "PARALLEL PREWITT" << std::endl;
+    this->apply_parallel(outputFileParallelPrewitt.getBuffer(), outBufferParallelPrewitt, image_filter::PREWITT_OPERATOR);
+    end = std::chrono::high_resolution_clock::now();
+    elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    std::cout << elapsed << " microseconds" << std::endl;
+    outputFileParallelPrewitt.setBuffer(outBufferParallelPrewitt);
+    outputFileParallelPrewitt.pixelsToBitmap(output[2]);
+
+    start = std::chrono::high_resolution_clock::now();
+    std::cout << "PARALLEL EDGE" << std::endl;
+    this->apply_parallel(outputFileParallelEdge.getBuffer(), outBufferParallelEdge, image_filter::EDGE_DETECTION);
+    end = std::chrono::high_resolution_clock::now();
+    elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    std::cout << elapsed << " microseconds" << std::endl;
+    outputFileParallelEdge.setBuffer(outBufferParallelEdge);
+    outputFileParallelEdge.pixelsToBitmap(output[3]);
+
+	delete[] outBufferSerialPrewitt;
+	delete[] outBufferParallelPrewitt;
+	delete[] outBufferSerialEdge;
+	delete[] outBufferParallelEdge;
 }
 
 int image_filter::prewitt_convolve(int *in_matrix, const int* filter_h, 
@@ -199,3 +242,20 @@ void image_filter::Filter::parallel(int *in_matrix, int *out_matrix, dimension d
         tg.wait();
     }
 }
+
+void image_filter::Filter::set_width(int width) { 
+    this->picture_width = width;
+}
+
+void image_filter::Filter::set_height(int height) { 
+    this->picture_height = height;
+}
+
+void image_filter::Filter::set_distance(int distance) {
+    this->distance = distance * 2 + 1;
+}
+
+void image_filter::Filter::set_cutoff(int cutoff) { 
+    this->cutoff = cutoff;
+}
+
