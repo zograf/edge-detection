@@ -4,3 +4,8 @@ src/build/
 src/build/*
 out/*
 out/
+res/*.bmp
+!res/color.bmp
+*.txt
+*.csv
+docs/*.bmp

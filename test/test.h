@@ -17,4 +17,5 @@ namespace filter_test {
     void calculate_p_o_test();
     void prewitt_convolve_test();
     void print_test(int, int, int, int);
+    void stress_test();
 }

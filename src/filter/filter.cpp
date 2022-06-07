@@ -3,10 +3,21 @@
 #include <iostream>
 #include <string>
 
+/**
+* @brief Edge detection filter constructor
+*/
+
 image_filter::Filter::Filter() {
 }
 
-void image_filter::Filter::run() {
+/**
+* @brief Function for running test.
+*
+* @param is_defaults Flag that enables setting default cutoff, distance and filter values.
+* Leave "false" for normal running. Put "true" if cutoff, distance and filter have already
+* been set
+*/
+void image_filter::Filter::run(bool is_defaults) {
     char* output[4];
     output[0] = (char*) "../../out/serialPrewitt.bmp";
     output[1] = (char*) "../../out/serialEdge.bmp";
@@ -25,9 +36,12 @@ void image_filter::Filter::run() {
 
     this->set_width(p_width);
     this->set_height(p_height);
-    this->set_cutoff(500);
-    this->set_distance(1);
-    this->set_filter(3);
+
+    if (is_defaults) {
+        this->set_cutoff(500);
+        this->set_distance(1);
+        this->set_filter(3);
+    }
 
 	int* outBufferSerialPrewitt = new int[p_width * p_height];
 	int* outBufferParallelPrewitt = new int[p_width * p_height];
@@ -40,46 +54,54 @@ void image_filter::Filter::run() {
     std::memset(outBufferParallelEdge, 0x0, p_width * p_height * sizeof(int));
 
     auto start = std::chrono::high_resolution_clock::now();
-    std::cout << "SERIAL PREWITT" << std::endl;
     this->apply_serial(outputFileSerialPrewitt.getBuffer(), outBufferSerialPrewitt, image_filter::PREWITT_OPERATOR);
     auto end = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-    std::cout << elapsed << " microseconds" << std::endl;
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     outputFileSerialPrewitt.setBuffer(outBufferSerialPrewitt);
     outputFileSerialPrewitt.pixelsToBitmap(output[0]);
+    std::cout << path << ",prewitt," << "serial,"<< this->cutoff << ",," << this->filter_size << "," << elapsed << std::endl;
 
     start = std::chrono::high_resolution_clock::now();
-    std::cout << "SERIAL EDGE" << std::endl;
     this->apply_serial(outputFileSerialEdge.getBuffer(), outBufferSerialEdge, image_filter::EDGE_DETECTION);
     end = std::chrono::high_resolution_clock::now();
-    elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-    std::cout << elapsed << " microseconds" << std::endl;
+    elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     outputFileSerialEdge.setBuffer(outBufferSerialEdge);
     outputFileSerialEdge.pixelsToBitmap(output[1]);
+    std::cout << path << ",edge," << "serial,"<< this->cutoff << "," << ((this->distance - 1) / 2) << ",," << elapsed << std::endl;
 
     start = std::chrono::high_resolution_clock::now();
-    std::cout << "PARALLEL PREWITT" << std::endl;
     this->apply_parallel(outputFileParallelPrewitt.getBuffer(), outBufferParallelPrewitt, image_filter::PREWITT_OPERATOR);
     end = std::chrono::high_resolution_clock::now();
-    elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-    std::cout << elapsed << " microseconds" << std::endl;
+    elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     outputFileParallelPrewitt.setBuffer(outBufferParallelPrewitt);
     outputFileParallelPrewitt.pixelsToBitmap(output[2]);
+    std::cout << path << ",prewitt," << "parallel,"<< this->cutoff << ",," << this->filter_size << "," << elapsed << std::endl;
 
     start = std::chrono::high_resolution_clock::now();
-    std::cout << "PARALLEL EDGE" << std::endl;
     this->apply_parallel(outputFileParallelEdge.getBuffer(), outBufferParallelEdge, image_filter::EDGE_DETECTION);
     end = std::chrono::high_resolution_clock::now();
-    elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-    std::cout << elapsed << " microseconds" << std::endl;
+    elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     outputFileParallelEdge.setBuffer(outBufferParallelEdge);
     outputFileParallelEdge.pixelsToBitmap(output[3]);
+    std::cout << path << ",edge," << "parallel,"<< this->cutoff << "," << ((this->distance - 1) / 2) << ",," << elapsed << std::endl;
 
 	delete[] outBufferSerialPrewitt;
 	delete[] outBufferParallelPrewitt;
 	delete[] outBufferSerialEdge;
 	delete[] outBufferParallelEdge;
 }
+
+/**
+* @brief Prewitt convolve function
+*
+* @param in_matrix Input image buffer 
+* @param filter_h Pointer to the horizontal prewitt operator
+* @param filter_v Pointer to the vertical prewitt operator
+* @param filter_size Prewitt operator size. 3 for 3x3, 5 for 5x5
+* @param picture_width Image width
+* @param x Pixel width coordinate
+* @param y Pixel height coordinate
+*/
 
 int image_filter::prewitt_convolve(int *in_matrix, const int* filter_h, 
         const int* filter_v, int filter_size, int picture_width, int x, int y) {
@@ -97,6 +119,19 @@ int image_filter::prewitt_convolve(int *in_matrix, const int* filter_h,
     return (total > THRESHOLD) ? 255 : 0;
 }
 
+
+/**
+* @brief Function that calculates p and o values for edge detection algorithm
+*
+* @param in_matrix Input image buffer 
+* @param picture_width Image width
+* @param x Pixel width coordinate
+* @param y Pixel height coordinate
+* @param distance Distance from the target pixel
+*
+* @return Pixel value
+*/
+
 int image_filter::calculate_p_o(int *in_matrix, int picture_width, 
         int x, int y, int distance) {
     int p = 0, o = 0;
@@ -113,10 +148,29 @@ int image_filter::calculate_p_o(int *in_matrix, int picture_width,
     return (p ^ o) == 1 ? 0 : 255;
 }
 
+/**
+* @brief Function that calls appropriate serial version of an algorithm
+*
+* @param in_matrix Input image buffer 
+* @param out_matrix Output image buffer 
+* @param dimension Image boundary structure
+* @param serial_function Pointer to a serial function that should be called
+* @see serial_prewitt()
+* @see serial_edge_detection()
+*/
+
 void image_filter::Filter::serial(int *in_matrix, int *out_matrix, dimension dim, 
         void (Filter::*serial_function)(int*, int*, struct dimension)) {
     (this->*serial_function)(in_matrix, out_matrix, dim);
 }
+
+/**
+* @brief Function that applies a prewitt filter on an image
+*
+* @param in_matrix Input image buffer 
+* @param out_matrix Output image buffer 
+* @param dimension Image boundary structure
+*/
 
 void image_filter::Filter::serial_prewitt(int *in_matrix, int *out_matrix, struct dimension dim) {
     for (int i = dim.start_h; i < dim.end_h; i++) {
@@ -127,6 +181,14 @@ void image_filter::Filter::serial_prewitt(int *in_matrix, int *out_matrix, struc
     }
 }
 
+/**
+* @brief Function that applies edge detection algorithm on an image
+*
+* @param in_matrix Input image buffer 
+* @param out_matrix Output image buffer 
+* @param dimension Image boundary structure
+*/
+
 void image_filter::Filter::serial_edge_detection(int *in_matrix, int *out_matrix, struct dimension dim) {
     for (int i = dim.start_h; i < dim.end_h; i++) {
         for (int j = dim.start_w; j < dim.end_w; j++) {
@@ -136,6 +198,11 @@ void image_filter::Filter::serial_edge_detection(int *in_matrix, int *out_matrix
     }
 }
 
+/**
+* @brief Filter setter
+*
+* @param filter_size Size of a prewitt operator
+*/
 
 void image_filter::Filter::set_filter(int filter_size) {
     if (filter_size == 3) {
@@ -150,6 +217,14 @@ void image_filter::Filter::set_filter(int filter_size) {
         throw std::invalid_argument("Filter size must be in {3, 5}.");
     }
 }
+
+/**
+* @brief Function that applies a serial algorithm on an image 
+*
+* @param in_matrix Input image buffer 
+* @param out_matrix Output image buffer 
+* @param type Filter type
+*/
 
 void image_filter::Filter::apply_serial(int *in_matrix, int *out_matrix, filter_type type) {
     // Function pointer
@@ -172,6 +247,14 @@ void image_filter::Filter::apply_serial(int *in_matrix, int *out_matrix, filter_
     serial(in_matrix, out_matrix, dim, p);
 }
 
+/**
+* @brief Function that applies a parallel algorithm on an image 
+*
+* @param in_matrix Input image buffer 
+* @param out_matrix Output image buffer 
+* @param type Filter type
+*/
+
 void image_filter::Filter::apply_parallel(int *in_matrix, int *out_matrix, filter_type type) {
     // Function pointer
     void (Filter::*p)(int*, int*, dimension);
@@ -192,6 +275,15 @@ void image_filter::Filter::apply_parallel(int *in_matrix, int *out_matrix, filte
     dim.end_w = this->picture_width - offset;
     parallel(in_matrix, out_matrix, dim, p);
 }
+
+/**
+* @brief Function that calls appropriate parallel version of an algorithm
+*
+* @param in_matrix Input image buffer 
+* @param out_matrix Output image buffer 
+* @param dimension Image boundary structure
+* @param serial_function Pointer to a serial function that should be called
+*/
 
 void image_filter::Filter::parallel(int *in_matrix, int *out_matrix, dimension dim, 
         void (Filter::*serial_function)(int*, int*, struct dimension)) {
@@ -243,17 +335,42 @@ void image_filter::Filter::parallel(int *in_matrix, int *out_matrix, dimension d
     }
 }
 
+/**
+* @brief Width setter
+*
+* @param width Image width
+*/
+
 void image_filter::Filter::set_width(int width) { 
     this->picture_width = width;
 }
+
+/**
+* @brief Height setter
+*
+* @param height Image height
+*/
 
 void image_filter::Filter::set_height(int height) { 
     this->picture_height = height;
 }
 
+/**
+* @brief Distance setter
+*
+* @param distance Pixel distance from the target pixel
+*/
+
 void image_filter::Filter::set_distance(int distance) {
     this->distance = distance * 2 + 1;
 }
+
+
+/**
+* @brief Cutoff setter
+*
+* @param cutoff Parallel algorithm cutoff
+*/
 
 void image_filter::Filter::set_cutoff(int cutoff) { 
     this->cutoff = cutoff;

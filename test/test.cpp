@@ -1,7 +1,16 @@
 #include "test.h"
 
+/**
+* @brief Test constructor
+*/
+
 filter_test::Test::Test() {
 }
+
+/**
+* @brief Unit test for prewitt convolve function 
+* @see image_filter::prewitt_convolve()
+*/
 
 void filter_test::prewitt_convolve_test() {
     // Filters
@@ -61,6 +70,15 @@ void filter_test::prewitt_convolve_test() {
     print_test(result_fifth, expected_fifth, 10, num_test);
 }
 
+/**
+* @brief Function that prints the resutl of a unit test
+*
+* @param first Function result
+* @param second Expected result
+* @param number Test number
+* @param total Number of tests
+*/
+
 void filter_test::print_test(int first, int second, int number, int total) {
     std::string s = "[" + std::to_string(number)  + "/" + std::to_string(total) + "] ";
     if (first == second) s += "OK";
@@ -68,6 +86,10 @@ void filter_test::print_test(int first, int second, int number, int total) {
     std::cout << s << std::endl;
 }
 
+/**
+* @brief Unit test for calculate_p_o function
+* @see image_filter::calculate_p_o()
+*/
 
 void filter_test::calculate_p_o_test() {
 
@@ -106,3 +128,30 @@ void filter_test::calculate_p_o_test() {
     print_test(result_third_, expected_third_, 6, num_test);
 }
 
+/**
+* @brief Function for running multiple tests and varying cutoff values
+*/
+
+void filter_test::stress_test() {
+    image_filter::Filter f;
+    int cutoff_count = 10;
+    int cutoff_coef = 100;
+
+    for (int i = 0; i < cutoff_count; ++i) {
+        int cutoff = (i + 1) * cutoff_coef; 
+
+        f.set_cutoff(cutoff);
+        f.set_distance(1);
+        f.set_filter(3);
+        f.run(false);
+
+        f.set_cutoff(cutoff);
+        f.set_distance(2);
+        f.run(false);
+
+        f.set_cutoff(cutoff);
+        f.set_distance(3);
+        f.set_filter(5);
+        f.run(false);
+    }
+}

@@ -69,7 +69,7 @@ namespace image_filter {
 
             void apply_serial(int*, int*, filter_type);
             void apply_parallel(int*, int*, filter_type);
-            void run();
+            void run(bool);
 
             void set_filter(int); 
             void set_width(int);
