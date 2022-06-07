@@ -8,4 +8,5 @@ res/*.bmp
 !res/color.bmp
 *.txt
 *.csv
-docs/*.bmp
+docs/Examples/*.bmp
+docs/Examples/

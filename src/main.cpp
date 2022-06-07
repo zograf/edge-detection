@@ -10,9 +10,10 @@ int main(int argc, char * argv[]) {
     // filter_test::calculate_p_o_test();
 
     // Normal run
-    //image_filter::Filter filter;
-    //filter.run(true);
+    // image_filter::Filter filter;
+    // filter.run(true);
 
+    // Test run
     filter_test::stress_test();
 
 	return 0;

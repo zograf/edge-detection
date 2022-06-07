@@ -23,7 +23,7 @@ void image_filter::Filter::run(bool is_defaults) {
     output[1] = (char*) "../../out/serialEdge.bmp";
     output[2] = (char*) "../../out/parallelPrewitt.bmp";
     output[3] = (char*) "../../out/parallelEdge.bmp";
-    char* path = (char*) "../../res/color.bmp";
+    char* path = (char*) "../../res/sackboy.bmp";
 
 	BitmapRawConverter inputFile(path);
 	BitmapRawConverter outputFileSerialPrewitt(path);
@@ -134,7 +134,7 @@ int image_filter::prewitt_convolve(int *in_matrix, const int* filter_h,
 
 int image_filter::calculate_p_o(int *in_matrix, int picture_width, 
         int x, int y, int distance) {
-    int p = 0, o = 0;
+    int p = 0, o = 1;
     int offset = (distance - 1) / 2;
     // Surrounding pixels
     for (int ver = 0; ver < distance; ver++) {
@@ -142,10 +142,10 @@ int image_filter::calculate_p_o(int *in_matrix, int picture_width,
             // if "1" exists
             if (in_matrix[(x - offset + ver) * picture_width + (y - offset + hor)] > THRESHOLD) p = 1;
             // if "0" exists
-            if (in_matrix[(x - offset + ver) * picture_width + (y - offset + hor)] < THRESHOLD) o = 1;
+            if (in_matrix[(x - offset + ver) * picture_width + (y - offset + hor)] < THRESHOLD) o = 0;
         }
     }
-    return (p ^ o) == 1 ? 0 : 255;
+    return (p ^ o) == 1 ? 255 : 0;
 }
 
 /**
